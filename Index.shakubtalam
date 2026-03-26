@@ -1,0 +1,1654 @@
+import { useState, useEffect, useRef, useCallback } from "react";
+
+/* ─── GOOGLE FONTS ──────────────────────────────────────── */
+const fontLink = document.createElement("link");
+fontLink.rel = "stylesheet";
+fontLink.href =
+  "https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,400;0,500;0,700;1,400;1,500&family=Outfit:wght@300;400;500;600&display=swap";
+document.head.appendChild(fontLink);
+
+/* ─── GLOBAL STYLES ─────────────────────────────────────── */
+const globalCSS = `
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+  :root {
+    --bg: #05050a;
+    --bg2: #0a0a12;
+    --surface: #0f0f1a;
+    --border: rgba(255,255,255,0.07);
+    --gold: #c9a84c;
+    --gold2: #e8c96d;
+    --gold3: rgba(201,168,76,0.15);
+    --text: #f0ede8;
+    --muted: rgba(240,237,232,0.45);
+    --muted2: rgba(240,237,232,0.25);
+    --white: #ffffff;
+    --green: #30d158;
+    --red: #ff453a;
+    --blue: #0a84ff;
+    --r: 14px;
+    --slow: cubic-bezier(0.16,1,0.3,1);
+    --ease: cubic-bezier(0.25,0.46,0.45,0.94);
+    --display: 'Playfair Display', serif;
+    --body: 'Outfit', sans-serif;
+  }
+  html { scroll-behavior: smooth; font-size: 16px; overflow-x: hidden; }
+  body {
+    font-family: var(--body);
+    background: var(--bg);
+    color: var(--text);
+    -webkit-font-smoothing: antialiased;
+    overflow-x: hidden;
+  }
+  ::-webkit-scrollbar { width: 3px; }
+  ::-webkit-scrollbar-track { background: var(--bg); }
+  ::-webkit-scrollbar-thumb { background: var(--gold); border-radius: 2px; }
+  ::selection { background: rgba(201,168,76,0.3); color: var(--text); }
+
+  @keyframes fadeUp { from { opacity:0; transform:translateY(40px); } to { opacity:1; transform:translateY(0); } }
+  @keyframes fadeIn { from { opacity:0; } to { opacity:1; } }
+  @keyframes scaleIn { from { opacity:0; transform:scale(0.92); } to { opacity:1; transform:scale(1); } }
+  @keyframes shimmer { 0%,100% { opacity:0.4; } 50% { opacity:1; } }
+  @keyframes rotateGlow { from { transform:rotate(0deg); } to { transform:rotate(360deg); } }
+  @keyframes float { 0%,100% { transform:translateY(0px); } 50% { transform:translateY(-18px); } }
+  @keyframes ticker { from { transform:translateX(0); } to { transform:translateX(-50%); } }
+  @keyframes pulse { 0%,100% { transform:scale(1); opacity:1; } 50% { transform:scale(1.08); opacity:0.7; } }
+  @keyframes gradientShift {
+    0% { background-position: 0% 50%; }
+    50% { background-position: 100% 50%; }
+    100% { background-position: 0% 50%; }
+  }
+  @keyframes borderGlow {
+    0%,100% { box-shadow: 0 0 20px rgba(201,168,76,0.1); }
+    50% { box-shadow: 0 0 40px rgba(201,168,76,0.25); }
+  }
+  @keyframes slideInLeft { from { opacity:0; transform:translateX(-60px); } to { opacity:1; transform:translateX(0); } }
+  @keyframes slideInRight { from { opacity:0; transform:translateX(60px); } to { opacity:1; transform:translateX(0); } }
+  @keyframes countUp { from { opacity:0; transform:translateY(20px); } to { opacity:1; transform:translateY(0); } }
+
+  .animate-fadeup { animation: fadeUp 1s var(--slow) both; }
+  .animate-fadein { animation: fadeIn 1s var(--slow) both; }
+  .animate-scalein { animation: scaleIn 0.8s var(--slow) both; }
+
+  .section-enter { opacity: 0; transform: translateY(50px); transition: opacity 0.9s var(--slow), transform 0.9s var(--slow); }
+  .section-enter.visible { opacity: 1; transform: translateY(0); }
+
+  .gold-text {
+    background: linear-gradient(135deg, #c9a84c, #e8c96d, #c9a84c);
+    background-size: 200% 200%;
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+    animation: gradientShift 4s ease infinite;
+  }
+
+  .glass {
+    background: rgba(255,255,255,0.03);
+    backdrop-filter: blur(20px);
+    -webkit-backdrop-filter: blur(20px);
+    border: 1px solid var(--border);
+  }
+
+  .hover-lift { transition: transform 0.4s var(--slow), box-shadow 0.4s var(--slow); }
+  .hover-lift:hover { transform: translateY(-8px); box-shadow: 0 30px 60px rgba(0,0,0,0.4); }
+
+  .grid-bg {
+    background-image: linear-gradient(rgba(255,255,255,0.02) 1px, transparent 1px),
+      linear-gradient(90deg, rgba(255,255,255,0.02) 1px, transparent 1px);
+    background-size: 64px 64px;
+  }
+
+  /* Particles */
+  .particle { position:absolute; border-radius:50%; pointer-events:none; animation: float linear infinite; }
+
+  /* Noise overlay */
+  .noise::after {
+    content:''; position:absolute; inset:0; pointer-events:none; z-index:1;
+    background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noise'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noise)' opacity='0.03'/%3E%3C/svg%3E");
+    opacity: 0.4;
+  }
+`;
+const styleEl = document.createElement("style");
+styleEl.textContent = globalCSS;
+document.head.appendChild(styleEl);
+
+/* ─── DATA ──────────────────────────────────────────────── */
+const NAV_LINKS = [
+  { label: "About", id: "about" },
+  { label: "Academics", id: "academics" },
+  { label: "Events", id: "events" },
+  { label: "Results", id: "results" },
+  { label: "Achievements", id: "achievements" },
+  { label: "Gallery", id: "gallery" },
+  { label: "Contact", id: "contact" },
+];
+
+const STATS = [
+  { num: "42", suffix: "+", label: "Years of Excellence" },
+  { num: "98.7", suffix: "%", label: "Board Pass Rate" },
+  { num: "3200", suffix: "+", label: "Students Enrolled" },
+  { num: "120", suffix: "+", label: "Awards & Honours" },
+];
+
+const EVENTS = [
+  {
+    date: "15", month: "Feb", tag: "Sports",
+    title: "Annual Athletics & Sports Day",
+    desc: "A grand celebration of athleticism, team spirit, and the prestigious Champion Trophy ceremony on our main grounds.",
+    time: "9:00 AM", venue: "School Grounds", emoji: "🏆",
+    gradient: "linear-gradient(135deg, #1a1a3e 0%, #2d2d6e 100%)"
+  },
+  {
+    date: "22", month: "Feb", tag: "Cultural",
+    title: "Tarang 2025 — Annual Cultural Fest",
+    desc: "Three days of music, classical dance, theatre, and art exhibitions showcasing the extraordinary talent of Shakuntalam.",
+    time: "5:00 PM", venue: "Main Auditorium", emoji: "🎭",
+    gradient: "linear-gradient(135deg, #1a0a2e 0%, #4a1a6e 100%)"
+  },
+  {
+    date: "08", month: "Mar", tag: "Academic",
+    title: "Science Olympiad Preparation Camp",
+    desc: "Intensive training by IIT alumni preparing our brightest students for state and national competitions.",
+    time: "10:00 AM", venue: "Science Block", emoji: "🔬",
+    gradient: "linear-gradient(135deg, #0a1a2e 0%, #1a3a5e 100%)"
+  },
+  {
+    date: "20", month: "Mar", tag: "Arts",
+    title: "Inter-School Debate Championship",
+    desc: "Schools from across Rajasthan compete in this prestigious debate tournament hosted by Shakuntalam.",
+    time: "2:00 PM", venue: "Conference Hall", emoji: "🎤",
+    gradient: "linear-gradient(135deg, #1a0a0a 0%, #4e1a1a 100%)"
+  },
+];
+
+const RESULTS_DATA = [
+  { rank:1, name:"Ananya Sharma", roll:"2025001", cls:"XII-A", exam:"Final Exam", total:"498/500", pct:99.6, grade:"A+" },
+  { rank:2, name:"Rohan Mehta", roll:"2025002", cls:"XII-A", exam:"Final Exam", total:"492/500", pct:98.4, grade:"A+" },
+  { rank:3, name:"Priya Nair", roll:"2025003", cls:"X-A", exam:"Final Exam", total:"485/500", pct:97.0, grade:"A+" },
+  { rank:4, name:"Karan Gupta", roll:"2025004", cls:"X-B", exam:"Unit Test I", total:"148/150", pct:98.7, grade:"A+" },
+  { rank:5, name:"Sneha Reddy", roll:"2025005", cls:"XII-B", exam:"Mid-Term", total:"430/500", pct:86.0, grade:"A" },
+  { rank:6, name:"Aditya Kumar", roll:"2025006", cls:"X-A", exam:"Unit Test II", total:"138/150", pct:92.0, grade:"A" },
+  { rank:7, name:"Meera Joshi", roll:"2025007", cls:"XII-A", exam:"Unit Test I", total:"140/150", pct:93.3, grade:"A" },
+  { rank:8, name:"Dev Patel", roll:"2025008", cls:"X-B", exam:"Final Exam", total:"410/500", pct:82.0, grade:"B+" },
+  { rank:9, name:"Nisha Verma", roll:"2025009", cls:"XII-B", exam:"Unit Test II", total:"125/150", pct:83.3, grade:"B+" },
+  { rank:10, name:"Sahil Bose", roll:"2025010", cls:"X-A", exam:"Mid-Term", total:"360/500", pct:72.0, grade:"B" },
+];
+
+const ACHIEVEMENTS = [
+  { icon:"🏆", num:"120+", label:"National & State Awards", sub:"Ministry of Education" },
+  { icon:"📚", num:"98.7%", label:"Board Pass Rate 2024", sub:"CBSE Certified" },
+  { icon:"🌍", num:"15+", label:"International Awards", sub:"MUN & Olympiads" },
+  { icon:"⚽", num:"34+", label:"Sports Championships", sub:"Rajasthan State Level" },
+  { icon:"🔬", num:"8", label:"Research Publications", sub:"Student authored" },
+  { icon:"🎨", num:"50+", label:"Cultural Trophies", sub:"Zonal & National" },
+];
+
+const GALLERY_ITEMS = [
+  { emoji:"🏫", label:"Main Campus", span:"col", gradient:"linear-gradient(135deg,#0a1628,#1a3a6e)" },
+  { emoji:"🔬", label:"Science Labs", gradient:"linear-gradient(135deg,#0a2818,#1a5e38)" },
+  { emoji:"🎭", label:"Auditorium", gradient:"linear-gradient(135deg,#280a28,#6e1a6e)" },
+  { emoji:"⚽", label:"Sports Ground", span:"col", gradient:"linear-gradient(135deg,#281a00,#6e4a00)" },
+  { emoji:"📚", label:"Library", gradient:"linear-gradient(135deg,#00142a,#003870)" },
+];
+
+const TICKER_ITEMS = [
+  "🎓 Admissions Open 2025–26 — Apply before March 31",
+  "🏆 State Science Olympiad — 1st Place!",
+  "📅 Annual Sports Day — February 15, 2025",
+  "📊 Board Exam Results — 98.7% pass rate!",
+  "🎭 Cultural Fest Tarang 2025 — February 22-24",
+  "📝 Parent-Teacher Meeting — Last Saturday of every month",
+];
+
+/* ─── HOOKS ─────────────────────────────────────────────── */
+function useScrollReveal() {
+  const ref = useRef(null);
+  const [visible, setVisible] = useState(false);
+  useEffect(() => {
+    const el = ref.current;
+    if (!el) return;
+    const obs = new IntersectionObserver(
+      ([entry]) => { if (entry.isIntersecting) { setVisible(true); obs.disconnect(); } },
+      { threshold: 0.1 }
+    );
+    obs.observe(el);
+    return () => obs.disconnect();
+  }, []);
+  return [ref, visible];
+}
+
+function useScrollY() {
+  const [y, setY] = useState(0);
+  useEffect(() => {
+    const handler = () => setY(window.scrollY);
+    window.addEventListener("scroll", handler, { passive: true });
+    return () => window.removeEventListener("scroll", handler);
+  }, []);
+  return y;
+}
+
+/* ─── COMPONENTS ─────────────────────────────────────────── */
+
+/* Animated Counter */
+function Counter({ target, suffix }) {
+  const [val, setVal] = useState(0);
+  const [ref, visible] = useScrollReveal();
+  useEffect(() => {
+    if (!visible) return;
+    const num = parseFloat(target);
+    const isDecimal = target.includes(".");
+    const duration = 1800;
+    const steps = 60;
+    let step = 0;
+    const timer = setInterval(() => {
+      step++;
+      const progress = step / steps;
+      const eased = 1 - Math.pow(1 - progress, 3);
+      const current = num * eased;
+      setVal(isDecimal ? current.toFixed(1) : Math.floor(current));
+      if (step >= steps) clearInterval(timer);
+    }, duration / steps);
+    return () => clearInterval(timer);
+  }, [visible, target]);
+  return <span ref={ref}>{val}{suffix}</span>;
+}
+
+/* Floating Particles */
+function Particles({ count = 20 }) {
+  const particles = useRef(
+    Array.from({ length: count }, (_, i) => ({
+      id: i,
+      left: Math.random() * 100,
+      top: Math.random() * 100,
+      size: Math.random() * 3 + 1,
+      duration: Math.random() * 8 + 6,
+      delay: Math.random() * 5,
+      opacity: Math.random() * 0.3 + 0.05,
+    }))
+  ).current;
+  return (
+    <div style={{ position:"absolute", inset:0, overflow:"hidden", pointerEvents:"none" }}>
+      {particles.map(p => (
+        <div key={p.id} style={{
+          position:"absolute",
+          left: `${p.left}%`, top: `${p.top}%`,
+          width: p.size, height: p.size,
+          borderRadius:"50%",
+          background: `rgba(201,168,76,${p.opacity})`,
+          animation: `float ${p.duration}s ease-in-out ${p.delay}s infinite`,
+        }} />
+      ))}
+    </div>
+  );
+}
+
+/* Gold Divider */
+function Divider({ style = {} }) {
+  return (
+    <div style={{ display:"flex", alignItems:"center", gap:12, margin:"24px 0", ...style }}>
+      <div style={{ width:40, height:1, background:"var(--gold)" }} />
+      <div style={{ width:6, height:6, background:"var(--gold)", borderRadius:"50%", animation:"pulse 2s infinite" }} />
+      <div style={{ width:20, height:1, background:"rgba(201,168,76,0.3)" }} />
+    </div>
+  );
+}
+
+/* Label */
+function SectionLabel({ children }) {
+  return (
+    <div style={{
+      display:"inline-flex", alignItems:"center", gap:10,
+      fontSize:"0.72rem", fontWeight:600, letterSpacing:"0.22em",
+      textTransform:"uppercase", color:"var(--gold)", marginBottom:16,
+    }}>
+      <span style={{ display:"block", width:20, height:1, background:"var(--gold)" }} />
+      {children}
+    </div>
+  );
+}
+
+/* ─── NAV ───────────────────────────────────────────────── */
+function Nav({ active, setActive }) {
+  const scrollY = useScrollY();
+  const [mobileOpen, setMobileOpen] = useState(false);
+  const scrolled = scrollY > 60;
+
+  const go = (id) => {
+    document.getElementById(id)?.scrollIntoView({ behavior:"smooth" });
+    setActive(id);
+    setMobileOpen(false);
+  };
+
+  return (
+    <>
+      <nav style={{
+        position:"fixed", top:0, left:0, right:0, zIndex:1000,
+        height:68, display:"flex", alignItems:"center", justifyContent:"space-between",
+        padding:"0 48px",
+        background: scrolled ? "rgba(5,5,10,0.88)" : "transparent",
+        backdropFilter: scrolled ? "blur(24px)" : "none",
+        WebkitBackdropFilter: scrolled ? "blur(24px)" : "none",
+        borderBottom: scrolled ? "1px solid var(--border)" : "1px solid transparent",
+        transition:"all 0.5s var(--ease)",
+      }}>
+        {/* Logo */}
+        <div style={{ display:"flex", alignItems:"center", gap:14, cursor:"pointer" }} onClick={() => go("hero")}>
+          <div style={{
+            width:40, height:40, borderRadius:12,
+            background:"linear-gradient(135deg,#c9a84c,#e8c96d)",
+            display:"flex", alignItems:"center", justifyContent:"center",
+            fontSize:"1.1rem", fontWeight:700,
+            boxShadow:"0 4px 20px rgba(201,168,76,0.3)",
+          }}>S</div>
+          <div>
+            <div style={{ fontFamily:"var(--display)", fontSize:"1.1rem", fontWeight:700, letterSpacing:"0.02em", lineHeight:1.1 }}>Shakuntalam</div>
+            <div style={{ fontSize:"0.62rem", letterSpacing:"0.15em", color:"var(--gold)", textTransform:"uppercase" }}>Banasthali Vidyapith</div>
+          </div>
+        </div>
+
+        {/* Links */}
+        <div style={{ display:"flex", alignItems:"center", gap:32 }} className="nav-desktop">
+          {NAV_LINKS.map(l => (
+            <button key={l.id} onClick={() => go(l.id)} style={{
+              background:"none", border:"none", cursor:"pointer",
+              fontSize:"0.82rem", fontWeight:400, letterSpacing:"0.02em",
+              color: active === l.id ? "var(--gold)" : "rgba(240,237,232,0.65)",
+              transition:"color 0.2s", padding:"4px 0", position:"relative",
+              fontFamily:"var(--body)",
+            }}>
+              {l.label}
+              {active === l.id && (
+                <span style={{ position:"absolute", bottom:-2, left:0, right:0, height:1, background:"var(--gold)" }} />
+              )}
+            </button>
+          ))}
+          <button onClick={() => go("contact")} style={{
+            padding:"9px 22px", borderRadius:100,
+            background:"linear-gradient(135deg,#c9a84c,#e8c96d)",
+            border:"none", cursor:"pointer",
+            fontSize:"0.8rem", fontWeight:600, color:"#0a0a0a",
+            letterSpacing:"0.02em", fontFamily:"var(--body)",
+            transition:"all 0.3s var(--ease)",
+            boxShadow:"0 4px 20px rgba(201,168,76,0.25)",
+          }}
+            onMouseEnter={e => e.currentTarget.style.boxShadow = "0 8px 30px rgba(201,168,76,0.5)"}
+            onMouseLeave={e => e.currentTarget.style.boxShadow = "0 4px 20px rgba(201,168,76,0.25)"}
+          >Enquire →</button>
+        </div>
+
+        {/* Hamburger */}
+        <button onClick={() => setMobileOpen(!mobileOpen)} style={{
+          display:"none", background:"none", border:"none", cursor:"pointer",
+          padding:8, flexDirection:"column", gap:5,
+        }} className="hamburger">
+          <span style={{ display:"block", width:22, height:1.5, background:"var(--text)", transition:"all 0.3s" }} />
+          <span style={{ display:"block", width:22, height:1.5, background:"var(--text)", transition:"all 0.3s" }} />
+          <span style={{ display:"block", width:16, height:1.5, background:"var(--gold)", transition:"all 0.3s" }} />
+        </button>
+      </nav>
+
+      {/* Mobile overlay */}
+      {mobileOpen && (
+        <div style={{
+          position:"fixed", inset:0, zIndex:999,
+          background:"rgba(5,5,10,0.98)", backdropFilter:"blur(20px)",
+          display:"flex", flexDirection:"column", alignItems:"center", justifyContent:"center", gap:32,
+          animation:"fadeIn 0.3s ease",
+        }}>
+          <button onClick={() => setMobileOpen(false)} style={{
+            position:"absolute", top:24, right:24, background:"none", border:"none",
+            color:"var(--text)", cursor:"pointer", fontSize:"1.5rem",
+          }}>✕</button>
+          {NAV_LINKS.map(l => (
+            <button key={l.id} onClick={() => go(l.id)} style={{
+              background:"none", border:"none", cursor:"pointer",
+              fontFamily:"var(--display)", fontSize:"2.2rem", fontWeight:400,
+              color: active === l.id ? "var(--gold)" : "var(--text)",
+            }}>{l.label}</button>
+          ))}
+        </div>
+      )}
+
+      <style>{`
+        @media (max-width: 900px) {
+          .nav-desktop { display: none !important; }
+          .hamburger { display: flex !important; }
+        }
+      `}</style>
+    </>
+  );
+}
+
+/* ─── TICKER ────────────────────────────────────────────── */
+function Ticker() {
+  const doubled = [...TICKER_ITEMS, ...TICKER_ITEMS];
+  return (
+    <div style={{
+      background:"linear-gradient(90deg, #c9a84c10, #c9a84c20, #c9a84c10)",
+      borderTop:"1px solid rgba(201,168,76,0.2)",
+      borderBottom:"1px solid rgba(201,168,76,0.2)",
+      padding:"10px 0", overflow:"hidden", whiteSpace:"nowrap",
+    }}>
+      <div style={{ display:"flex", animation:"ticker 35s linear infinite" }}>
+        {doubled.map((item, i) => (
+          <span key={i} style={{
+            padding:"0 48px", fontSize:"0.78rem", color:"rgba(201,168,76,0.9)",
+            letterSpacing:"0.04em", display:"inline-flex", alignItems:"center", gap:8,
+          }}>
+            {item}
+            <span style={{ color:"rgba(201,168,76,0.3)", marginLeft:24 }}>◆</span>
+          </span>
+        ))}
+      </div>
+    </div>
+  );
+}
+
+/* ─── HERO ──────────────────────────────────────────────── */
+function Hero() {
+  const [loaded, setLoaded] = useState(false);
+  useEffect(() => { setTimeout(() => setLoaded(true), 100); }, []);
+
+  return (
+    <section id="hero" style={{
+      minHeight:"100vh", display:"flex", flexDirection:"column",
+      justifyContent:"center", alignItems:"center",
+      position:"relative", overflow:"hidden", textAlign:"center",
+      padding:"120px 24px 60px",
+    }}>
+      {/* Background layers */}
+      <div style={{ position:"absolute", inset:0, background:"var(--bg)" }} />
+      <div style={{
+        position:"absolute", inset:0,
+        background:"radial-gradient(ellipse 80% 60% at 50% 40%, rgba(201,168,76,0.06) 0%, transparent 70%)",
+      }} />
+      <div className="grid-bg" style={{ position:"absolute", inset:0, opacity:0.6 }} />
+      <Particles count={30} />
+
+      {/* Glowing orb */}
+      <div style={{
+        position:"absolute", top:"30%", left:"50%", transform:"translate(-50%,-50%)",
+        width:600, height:600, borderRadius:"50%",
+        background:"radial-gradient(circle, rgba(201,168,76,0.04) 0%, transparent 70%)",
+        animation:"rotateGlow 20s linear infinite",
+        pointerEvents:"none",
+      }} />
+
+      {/* Rotating ring */}
+      <div style={{
+        position:"absolute", top:"30%", left:"50%", transform:"translate(-50%,-50%)",
+        width:500, height:500, borderRadius:"50%",
+        border:"1px solid rgba(201,168,76,0.08)",
+        animation:"rotateGlow 15s linear infinite",
+      }} />
+      <div style={{
+        position:"absolute", top:"30%", left:"50%", transform:"translate(-50%,-50%)",
+        width:340, height:340, borderRadius:"50%",
+        border:"1px dashed rgba(201,168,76,0.06)",
+        animation:"rotateGlow 10s linear infinite reverse",
+      }} />
+
+      {/* Content */}
+      <div style={{ position:"relative", zIndex:2, maxWidth:900 }}>
+        {/* Badge */}
+        <div style={{
+          display:"inline-flex", alignItems:"center", gap:10,
+          padding:"8px 20px", borderRadius:100,
+          border:"1px solid rgba(201,168,76,0.3)",
+          background:"rgba(201,168,76,0.07)",
+          marginBottom:40,
+          opacity: loaded ? 1 : 0,
+          transform: loaded ? "translateY(0)" : "translateY(20px)",
+          transition:"all 0.8s var(--slow) 0.2s",
+        }}>
+          <span style={{ width:6, height:6, background:"var(--green)", borderRadius:"50%", animation:"pulse 2s infinite" }} />
+          <span style={{ fontSize:"0.72rem", fontWeight:600, letterSpacing:"0.18em", color:"var(--gold)", textTransform:"uppercase" }}>
+            Admissions Open 2025–26
+          </span>
+        </div>
+
+        {/* Heading */}
+        <h1 style={{
+          fontFamily:"var(--display)",
+          fontSize:"clamp(3.2rem, 9vw, 7.5rem)",
+          fontWeight:700, lineHeight:1.04,
+          letterSpacing:"-0.02em",
+          marginBottom:12,
+          opacity: loaded ? 1 : 0,
+          transform: loaded ? "translateY(0)" : "translateY(30px)",
+          transition:"all 0.9s var(--slow) 0.35s",
+        }}>
+          <span style={{ display:"block", color:"var(--text)" }}>Shakuntalam</span>
+          <span className="gold-text" style={{ display:"block", fontStyle:"italic" }}>School of Excellence</span>
+        </h1>
+
+        <p style={{
+          fontSize:"clamp(0.9rem,2vw,1.15rem)",
+          color:"var(--muted)", lineHeight:1.85, maxWidth:580, margin:"0 auto 48px",
+          opacity: loaded ? 1 : 0,
+          transform: loaded ? "translateY(0)" : "translateY(20px)",
+          transition:"all 1s var(--slow) 0.5s",
+        }}>
+          Nestled in the serene campus of Banasthali Vidyapith, Rajasthan — we cultivate 
+          scholars, leaders, and visionaries through rigorous academics and holistic values.
+        </p>
+
+        {/* CTAs */}
+        <div style={{
+          display:"flex", gap:16, justifyContent:"center", flexWrap:"wrap",
+          opacity: loaded ? 1 : 0,
+          transform: loaded ? "translateY(0)" : "translateY(20px)",
+          transition:"all 1s var(--slow) 0.65s",
+        }}>
+          <button
+            onClick={() => document.getElementById("contact")?.scrollIntoView({ behavior:"smooth" })}
+            style={{
+              padding:"15px 36px", borderRadius:100,
+              background:"linear-gradient(135deg,#c9a84c,#e8c96d)",
+              border:"none", cursor:"pointer",
+              fontSize:"0.92rem", fontWeight:600, color:"#0a0a0a",
+              letterSpacing:"0.02em", fontFamily:"var(--body)",
+              boxShadow:"0 8px 40px rgba(201,168,76,0.35)",
+              transition:"all 0.3s var(--ease)",
+            }}
+            onMouseEnter={e => { e.currentTarget.style.transform="translateY(-3px)"; e.currentTarget.style.boxShadow="0 16px 50px rgba(201,168,76,0.5)"; }}
+            onMouseLeave={e => { e.currentTarget.style.transform="translateY(0)"; e.currentTarget.style.boxShadow="0 8px 40px rgba(201,168,76,0.35)"; }}
+          >Apply for Admission →</button>
+          <button
+            onClick={() => document.getElementById("about")?.scrollIntoView({ behavior:"smooth" })}
+            style={{
+              padding:"14px 36px", borderRadius:100,
+              background:"transparent",
+              border:"1px solid rgba(240,237,232,0.2)",
+              cursor:"pointer",
+              fontSize:"0.92rem", fontWeight:400, color:"var(--text)",
+              letterSpacing:"0.02em", fontFamily:"var(--body)",
+              transition:"all 0.3s var(--ease)",
+            }}
+            onMouseEnter={e => { e.currentTarget.style.borderColor="var(--gold)"; e.currentTarget.style.color="var(--gold)"; }}
+            onMouseLeave={e => { e.currentTarget.style.borderColor="rgba(240,237,232,0.2)"; e.currentTarget.style.color="var(--text)"; }}
+          >Explore School</button>
+        </div>
+
+        {/* Stats row */}
+        <div style={{
+          display:"flex", justifyContent:"center", gap:0,
+          marginTop:80, paddingTop:48,
+          borderTop:"1px solid var(--border)",
+          flexWrap:"wrap",
+          opacity: loaded ? 1 : 0,
+          transition:"all 1s var(--slow) 0.9s",
+        }}>
+          {STATS.map((s, i) => (
+            <div key={i} style={{
+              padding:"0 40px", textAlign:"center",
+              borderRight: i < STATS.length-1 ? "1px solid var(--border)" : "none",
+            }}>
+              <div style={{
+                fontFamily:"var(--display)", fontSize:"clamp(2rem,4vw,3rem)",
+                fontWeight:500, color:"var(--text)", lineHeight:1,
+              }}>
+                <Counter target={s.num} suffix={s.suffix} />
+              </div>
+              <div style={{ fontSize:"0.75rem", color:"var(--muted)", marginTop:8, letterSpacing:"0.04em" }}>{s.label}</div>
+            </div>
+          ))}
+        </div>
+      </div>
+
+      {/* Scroll indicator */}
+      <div style={{
+        position:"absolute", bottom:40, left:"50%", transform:"translateX(-50%)",
+        display:"flex", flexDirection:"column", alignItems:"center", gap:8,
+        opacity:0.4, animation:"fadeIn 1s var(--slow) 1.5s both",
+      }}>
+        <span style={{ fontSize:"0.65rem", letterSpacing:"0.15em", textTransform:"uppercase", color:"var(--muted)" }}>Scroll</span>
+        <div style={{
+          width:1, height:40,
+          background:"linear-gradient(to bottom, var(--gold), transparent)",
+          animation:"shimmer 2s infinite",
+        }} />
+      </div>
+    </section>
+  );
+}
+
+/* ─── ABOUT ─────────────────────────────────────────────── */
+function About() {
+  const [ref, visible] = useScrollReveal();
+  const values = [
+    { icon:"⚡", title:"Academic Rigour", text:"IB & CBSE curriculum with top-ranked faculty from premier institutions." },
+    { icon:"🌱", title:"Values First", text:"Character, empathy, and integrity woven into every lesson." },
+    { icon:"🔬", title:"Innovation Labs", text:"STEM, robotics, coding, and maker spaces for tomorrow's builders." },
+    { icon:"🌍", title:"Global Exposure", text:"MUNs, exchange programmes, and international competitions." },
+  ];
+
+  return (
+    <section id="about" style={{ padding:"140px 0", position:"relative", overflow:"hidden" }}>
+      <div style={{
+        position:"absolute", right:-200, top:"50%", transform:"translateY(-50%)",
+        width:600, height:600, borderRadius:"50%",
+        background:"radial-gradient(circle, rgba(201,168,76,0.03) 0%, transparent 70%)",
+        pointerEvents:"none",
+      }} />
+
+      <div style={{ maxWidth:1180, margin:"0 auto", padding:"0 40px" }}>
+        <div style={{ display:"grid", gridTemplateColumns:"1fr 1fr", gap:100, alignItems:"center" }} ref={ref}
+          className="about-grid">
+          {/* Visual */}
+          <div style={{
+            opacity: visible ? 1 : 0,
+            transform: visible ? "translateX(0)" : "translateX(-50px)",
+            transition:"all 1s var(--slow)",
+          }}>
+            <div style={{
+              position:"relative", borderRadius:24, overflow:"hidden",
+              height:520,
+              background:"linear-gradient(145deg, #0f0f1a, #1a1a2e)",
+              border:"1px solid var(--border)",
+              display:"flex", alignItems:"center", justifyContent:"center",
+            }}>
+              {/* Pattern */}
+              <div style={{
+                position:"absolute", inset:0,
+                backgroundImage:"repeating-linear-gradient(45deg, rgba(201,168,76,0.03) 0, rgba(201,168,76,0.03) 1px, transparent 0, transparent 50%)",
+                backgroundSize:"30px 30px",
+              }} />
+              <div style={{ position:"relative", textAlign:"center" }}>
+                <div style={{ fontSize:"6rem", marginBottom:16, animation:"float 4s ease-in-out infinite" }}>🏛️</div>
+                <div style={{ fontFamily:"var(--display)", fontSize:"1.4rem", color:"var(--gold)", fontStyle:"italic" }}>
+                  Est. 1982
+                </div>
+                <div style={{ fontSize:"0.8rem", color:"var(--muted)", marginTop:6, letterSpacing:"0.08em" }}>
+                  Banasthali Vidyapith, Rajasthan
+                </div>
+              </div>
+              {/* Corner badge */}
+              <div style={{
+                position:"absolute", top:24, right:24,
+                padding:"8px 16px", borderRadius:100,
+                background:"rgba(201,168,76,0.1)",
+                border:"1px solid rgba(201,168,76,0.2)",
+                fontSize:"0.72rem", color:"var(--gold)", fontWeight:600,
+              }}>CBSE Affiliated</div>
+              {/* Bottom strip */}
+              <div style={{
+                position:"absolute", bottom:0, left:0, right:0,
+                background:"linear-gradient(to top, rgba(0,0,0,0.6), transparent)",
+                padding:"32px 28px 28px",
+              }}>
+                <div style={{ display:"flex", gap:16 }}>
+                  {["🎓 1200 Students","📚 80+ Faculty","🏆 42 Years"].map((t, i) => (
+                    <div key={i} style={{
+                      padding:"6px 14px", borderRadius:100,
+                      background:"rgba(255,255,255,0.08)",
+                      fontSize:"0.72rem", color:"rgba(255,255,255,0.7)",
+                    }}>{t}</div>
+                  ))}
+                </div>
+              </div>
+            </div>
+          </div>
+
+          {/* Text */}
+          <div style={{
+            opacity: visible ? 1 : 0,
+            transform: visible ? "translateX(0)" : "translateX(50px)",
+            transition:"all 1s var(--slow) 0.2s",
+          }}>
+            <SectionLabel>Our Legacy</SectionLabel>
+            <h2 style={{
+              fontFamily:"var(--display)", fontSize:"clamp(2.4rem,4vw,3.6rem)",
+              fontWeight:500, lineHeight:1.15, letterSpacing:"-0.01em",
+            }}>
+              Four Decades of<br />
+              <span className="gold-text" style={{ fontStyle:"italic" }}>Shaping Futures</span>
+            </h2>
+            <Divider />
+            <p style={{ fontSize:"1rem", color:"var(--muted)", lineHeight:1.85, marginBottom:16 }}>
+              Founded in 1982 within the distinguished campus of Banasthali Vidyapith — one of India's premier women's universities — Shakuntalam has grown into a beacon of holistic education in Rajasthan.
+            </p>
+            <p style={{ fontSize:"0.95rem", color:"var(--muted2)", lineHeight:1.85, marginBottom:40 }}>
+              We blend the wisdom of India's ancient gurukul tradition with the rigor of modern global education, producing graduates who excel in every field — from science and technology to arts and public service.
+            </p>
+
+            <div style={{ display:"grid", gridTemplateColumns:"1fr 1fr", gap:16 }}>
+              {values.map((v, i) => (
+                <div key={i} className="hover-lift" style={{
+                  padding:"24px 20px",
+                  background:"rgba(255,255,255,0.02)",
+                  border:"1px solid var(--border)",
+                  borderRadius:var => 16,
+                  cursor:"default",
+                  borderRadius:16,
+                  transition:"all 0.4s var(--ease)",
+                }}
+                  onMouseEnter={e => { e.currentTarget.style.borderColor="rgba(201,168,76,0.3)"; e.currentTarget.style.background="rgba(201,168,76,0.04)"; }}
+                  onMouseLeave={e => { e.currentTarget.style.borderColor="var(--border)"; e.currentTarget.style.background="rgba(255,255,255,0.02)"; }}
+                >
+                  <div style={{ fontSize:"1.6rem", marginBottom:10 }}>{v.icon}</div>
+                  <div style={{ fontWeight:600, fontSize:"0.9rem", marginBottom:6 }}>{v.title}</div>
+                  <div style={{ fontSize:"0.8rem", color:"var(--muted)", lineHeight:1.5 }}>{v.text}</div>
+                </div>
+              ))}
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <style>{`
+        @media (max-width: 900px) {
+          .about-grid { grid-template-columns: 1fr !important; gap: 48px !important; }
+        }
+      `}</style>
+    </section>
+  );
+}
+
+/* ─── ACADEMICS ─────────────────────────────────────────── */
+function Academics() {
+  const [ref, visible] = useScrollReveal();
+  const streams = [
+    { icon:"🧪", name:"Science Stream", desc:"Physics, Chemistry, Biology / Mathematics with world-class labs and research mentorship.", tag:"PCB / PCM" },
+    { icon:"📊", name:"Commerce Stream", desc:"Accountancy, Business Studies, Economics — grooming tomorrow's entrepreneurs and CAs.", tag:"Commerce" },
+    { icon:"🎨", name:"Humanities Stream", desc:"History, Geography, Political Science, Psychology, Fine Arts for creative and analytical minds.", tag:"Arts" },
+    { icon:"💻", name:"Computer Science", desc:"Python, AI/ML fundamentals, Data Structures — integrated across all streams.", tag:"Elective" },
+  ];
+
+  return (
+    <section id="academics" style={{ padding:"140px 0", background:"var(--bg2)", position:"relative" }}>
+      <div style={{
+        position:"absolute", inset:0,
+        backgroundImage:"radial-gradient(circle at 20% 80%, rgba(201,168,76,0.04) 0%, transparent 50%)",
+      }} />
+      <div style={{ maxWidth:1180, margin:"0 auto", padding:"0 40px", position:"relative" }} ref={ref}>
+        <div style={{ textAlign:"center", marginBottom:80 }}>
+          <SectionLabel>What We Offer</SectionLabel>
+          <h2 style={{
+            fontFamily:"var(--display)", fontSize:"clamp(2.4rem,4vw,3.6rem)",
+            fontWeight:500, lineHeight:1.15,
+            opacity: visible ? 1 : 0, transform: visible ? "translateY(0)" : "translateY(30px)",
+            transition:"all 0.9s var(--slow)",
+          }}>
+            Academic <span className="gold-text" style={{ fontStyle:"italic" }}>Programmes</span>
+          </h2>
+        </div>
+
+        <div style={{ display:"grid", gridTemplateColumns:"repeat(2,1fr)", gap:24 }} className="academics-grid">
+          {streams.map((s, i) => (
+            <div key={i} style={{
+              padding:"40px 36px",
+              background:"rgba(255,255,255,0.02)",
+              border:"1px solid var(--border)",
+              borderRadius:20,
+              position:"relative", overflow:"hidden",
+              cursor:"default",
+              opacity: visible ? 1 : 0,
+              transform: visible ? "translateY(0)" : "translateY(30px)",
+              transition:`all 0.8s var(--slow) ${i*0.12}s`,
+            }}
+              onMouseEnter={e => { e.currentTarget.style.borderColor="rgba(201,168,76,0.3)"; e.currentTarget.style.background="rgba(201,168,76,0.03)"; e.currentTarget.style.transform="translateY(-6px)"; }}
+              onMouseLeave={e => { e.currentTarget.style.borderColor="var(--border)"; e.currentTarget.style.background="rgba(255,255,255,0.02)"; e.currentTarget.style.transform="translateY(0)"; }}
+            >
+              <div style={{ position:"absolute", top:0, right:0, width:120, height:120,
+                background:"radial-gradient(circle, rgba(201,168,76,0.06) 0%, transparent 70%)" }} />
+              <div style={{ position:"absolute", top:20, right:20,
+                padding:"4px 12px", borderRadius:100,
+                background:"rgba(201,168,76,0.1)", border:"1px solid rgba(201,168,76,0.2)",
+                fontSize:"0.68rem", color:"var(--gold)", fontWeight:600, letterSpacing:"0.06em",
+              }}>{s.tag}</div>
+              <div style={{ fontSize:"2.8rem", marginBottom:20 }}>{s.icon}</div>
+              <h3 style={{ fontFamily:"var(--display)", fontSize:"1.5rem", fontWeight:500, marginBottom:12 }}>{s.name}</h3>
+              <p style={{ fontSize:"0.9rem", color:"var(--muted)", lineHeight:1.7 }}>{s.desc}</p>
+            </div>
+          ))}
+        </div>
+      </div>
+
+      <style>{`
+        @media (max-width: 768px) {
+          .academics-grid { grid-template-columns: 1fr !important; }
+        }
+      `}</style>
+    </section>
+  );
+}
+
+/* ─── EVENTS ────────────────────────────────────────────── */
+function Events() {
+  const [ref, visible] = useScrollReveal();
+
+  return (
+    <section id="events" style={{ padding:"140px 0", position:"relative" }}>
+      <div style={{ maxWidth:1180, margin:"0 auto", padding:"0 40px" }} ref={ref}>
+        <div style={{ display:"flex", justifyContent:"space-between", alignItems:"flex-end", marginBottom:64, flexWrap:"wrap", gap:20 }}>
+          <div>
+            <SectionLabel>What's Happening</SectionLabel>
+            <h2 style={{
+              fontFamily:"var(--display)", fontSize:"clamp(2.4rem,4vw,3.6rem)", fontWeight:500, lineHeight:1.1,
+              opacity: visible ? 1 : 0, transform: visible ? "translateY(0)" : "translateY(30px)",
+              transition:"all 0.9s var(--slow)",
+            }}>
+              Events <span className="gold-text" style={{ fontStyle:"italic" }}>& News</span>
+            </h2>
+          </div>
+          <button style={{
+            padding:"11px 28px", borderRadius:100,
+            border:"1px solid var(--border)",
+            background:"transparent", cursor:"pointer",
+            fontSize:"0.85rem", color:"var(--muted)", fontFamily:"var(--body)",
+            transition:"all 0.3s",
+          }}
+            onMouseEnter={e => { e.currentTarget.style.borderColor="var(--gold)"; e.currentTarget.style.color="var(--gold)"; }}
+            onMouseLeave={e => { e.currentTarget.style.borderColor="var(--border)"; e.currentTarget.style.color="var(--muted)"; }}
+          >View All Events →</button>
+        </div>
+
+        <div style={{ display:"grid", gridTemplateColumns:"repeat(2,1fr)", gap:24 }} className="events-grid">
+          {EVENTS.map((ev, i) => (
+            <div key={i} className="hover-lift" style={{
+              borderRadius:20, overflow:"hidden",
+              border:"1px solid var(--border)",
+              cursor:"pointer",
+              opacity: visible ? 1 : 0,
+              transform: visible ? "translateY(0)" : "translateY(40px)",
+              transition:`all 0.9s var(--slow) ${i*0.1}s`,
+            }}>
+              {/* Image area */}
+              <div style={{
+                height:180, background:ev.gradient,
+                display:"flex", alignItems:"center", justifyContent:"center",
+                fontSize:"3.5rem", position:"relative", overflow:"hidden",
+              }}>
+                <div style={{
+                  position:"absolute", inset:0,
+                  backgroundImage:"repeating-linear-gradient(60deg, rgba(255,255,255,0.02) 0, rgba(255,255,255,0.02) 1px, transparent 0, transparent 50%)",
+                  backgroundSize:"20px 20px",
+                }} />
+                <span style={{ position:"relative", zIndex:1 }}>{ev.emoji}</span>
+                {/* Date */}
+                <div style={{
+                  position:"absolute", top:16, left:16,
+                  background:"rgba(0,0,0,0.6)", backdropFilter:"blur(10px)",
+                  borderRadius:12, padding:"10px 14px", textAlign:"center",
+                  border:"1px solid rgba(255,255,255,0.1)",
+                }}>
+                  <div style={{ fontFamily:"var(--display)", fontSize:"1.8rem", color:"var(--gold)", lineHeight:1 }}>{ev.date}</div>
+                  <div style={{ fontSize:"0.6rem", letterSpacing:"0.1em", textTransform:"uppercase", color:"rgba(255,255,255,0.5)", marginTop:2 }}>{ev.month}</div>
+                </div>
+                {/* Tag */}
+                <div style={{
+                  position:"absolute", top:16, right:16,
+                  padding:"5px 14px", borderRadius:100,
+                  background:"rgba(201,168,76,0.2)", border:"1px solid rgba(201,168,76,0.3)",
+                  fontSize:"0.68rem", color:"var(--gold)", fontWeight:600, letterSpacing:"0.06em",
+                }}>{ev.tag}</div>
+              </div>
+              {/* Body */}
+              <div style={{ padding:"28px", background:"rgba(255,255,255,0.02)" }}>
+                <h3 style={{ fontFamily:"var(--display)", fontSize:"1.25rem", fontWeight:500, marginBottom:10, lineHeight:1.3 }}>{ev.title}</h3>
+                <p style={{ fontSize:"0.85rem", color:"var(--muted)", lineHeight:1.7, marginBottom:20 }}>{ev.desc}</p>
+                <div style={{ display:"flex", justifyContent:"space-between", alignItems:"center" }}>
+                  <span style={{ fontSize:"0.78rem", color:"var(--muted2)", display:"flex", alignItems:"center", gap:6 }}>
+                    🕐 {ev.time} · {ev.venue}
+                  </span>
+                  <span style={{ fontSize:"0.78rem", color:"var(--gold)", fontWeight:500 }}>Learn more →</span>
+                </div>
+              </div>
+            </div>
+          ))}
+        </div>
+      </div>
+
+      <style>{`
+        @media (max-width: 768px) {
+          .events-grid { grid-template-columns: 1fr !important; }
+        }
+      `}</style>
+    </section>
+  );
+}
+
+/* ─── RESULTS ───────────────────────────────────────────── */
+function Results() {
+  const [ref, visible] = useScrollReveal();
+  const [search, setSearch] = useState("");
+  const [examFilter, setExamFilter] = useState("");
+  const [classFilter, setClassFilter] = useState("");
+
+  const filtered = RESULTS_DATA.filter(r => {
+    const q = search.toLowerCase();
+    return (
+      (!q || r.name.toLowerCase().includes(q) || r.roll.includes(q)) &&
+      (!examFilter || r.exam === examFilter) &&
+      (!classFilter || r.cls === classFilter)
+    );
+  });
+
+  const gradeColor = g => g.startsWith("A") ? "#30d158" : g.startsWith("B") ? "#0a84ff" : "#ff9f0a";
+  const rankStyle = r => ({
+    1: { bg:"rgba(255,215,0,0.12)", color:"#ffd700" },
+    2: { bg:"rgba(192,192,192,0.12)", color:"#c0c0c0" },
+    3: { bg:"rgba(205,127,50,0.12)", color:"#cd7f32" },
+  }[r] || { bg:"rgba(255,255,255,0.05)", color:"rgba(255,255,255,0.4)" });
+
+  const inputStyle = {
+    padding:"12px 18px", borderRadius:12,
+    background:"rgba(255,255,255,0.04)",
+    border:"1px solid rgba(255,255,255,0.08)",
+    color:"var(--text)", fontFamily:"var(--body)", fontSize:"0.88rem",
+    outline:"none", transition:"border-color 0.2s",
+  };
+
+  return (
+    <section id="results" style={{ padding:"140px 0", background:"var(--bg2)", position:"relative" }}>
+      <div style={{
+        position:"absolute", inset:0,
+        background:"radial-gradient(circle at 80% 20%, rgba(201,168,76,0.04) 0%, transparent 50%)",
+      }} />
+      <div style={{ maxWidth:1180, margin:"0 auto", padding:"0 40px", position:"relative" }} ref={ref}>
+        <SectionLabel>Academic Performance</SectionLabel>
+        <h2 style={{
+          fontFamily:"var(--display)", fontSize:"clamp(2.4rem,4vw,3.6rem)", fontWeight:500,
+          marginBottom:12, lineHeight:1.1,
+          opacity: visible ? 1 : 0, transform: visible ? "translateY(0)" : "translateY(30px)",
+          transition:"all 0.9s var(--slow)",
+        }}>
+          Student <span className="gold-text" style={{ fontStyle:"italic" }}>Results</span>
+        </h2>
+        <p style={{ color:"var(--muted)", fontSize:"0.95rem", marginBottom:48, maxWidth:520 }}>
+          Search and filter Unit Test and Final Exam results across all classes.
+        </p>
+
+        {/* Controls */}
+        <div style={{ display:"flex", gap:16, marginBottom:32, flexWrap:"wrap" }}>
+          <input
+            style={{ ...inputStyle, flex:1, minWidth:240 }}
+            placeholder="🔍  Search by name or roll number…"
+            value={search} onChange={e => setSearch(e.target.value)}
+            onFocus={e => e.currentTarget.style.borderColor="var(--gold)"}
+            onBlur={e => e.currentTarget.style.borderColor="rgba(255,255,255,0.08)"}
+          />
+          <select style={{ ...inputStyle, minWidth:160, cursor:"pointer" }}
+            value={examFilter} onChange={e => setExamFilter(e.target.value)}
+            onFocus={e => e.currentTarget.style.borderColor="var(--gold)"}
+            onBlur={e => e.currentTarget.style.borderColor="rgba(255,255,255,0.08)"}
+          >
+            <option value="">All Exams</option>
+            <option value="Unit Test I">Unit Test I</option>
+            <option value="Unit Test II">Unit Test II</option>
+            <option value="Mid-Term">Mid-Term</option>
+            <option value="Final Exam">Final Exam</option>
+          </select>
+          <select style={{ ...inputStyle, minWidth:150, cursor:"pointer" }}
+            value={classFilter} onChange={e => setClassFilter(e.target.value)}
+            onFocus={e => e.currentTarget.style.borderColor="var(--gold)"}
+            onBlur={e => e.currentTarget.style.borderColor="rgba(255,255,255,0.08)"}
+          >
+            <option value="">All Classes</option>
+            <option value="X-A">Class X-A</option>
+            <option value="X-B">Class X-B</option>
+            <option value="XII-A">Class XII-A</option>
+            <option value="XII-B">Class XII-B</option>
+          </select>
+        </div>
+
+        {/* Table */}
+        <div style={{ borderRadius:16, border:"1px solid var(--border)", overflow:"hidden" }}>
+          <div style={{ overflowX:"auto" }}>
+            <table style={{ width:"100%", borderCollapse:"collapse" }}>
+              <thead>
+                <tr style={{ background:"rgba(255,255,255,0.02)", borderBottom:"1px solid var(--border)" }}>
+                  {["Rank","Student","Roll No.","Class","Exam","Marks","Percentage","Grade"].map(h => (
+                    <th key={h} style={{
+                      padding:"14px 20px", textAlign:"left",
+                      fontSize:"0.68rem", fontWeight:600, letterSpacing:"0.12em",
+                      textTransform:"uppercase", color:"var(--muted2)",
+                      fontFamily:"var(--body)", whiteSpace:"nowrap",
+                    }}>{h}</th>
+                  ))}
+                </tr>
+              </thead>
+              <tbody>
+                {filtered.length === 0 ? (
+                  <tr><td colSpan={8} style={{ padding:"48px", textAlign:"center", color:"var(--muted2)", fontSize:"0.9rem" }}>
+                    No results found for your search.
+                  </td></tr>
+                ) : filtered.map((r, i) => {
+                  const rs = rankStyle(r.rank);
+                  return (
+                    <tr key={i} style={{
+                      borderBottom:"1px solid rgba(255,255,255,0.04)",
+                      transition:"background 0.2s",
+                    }}
+                      onMouseEnter={e => e.currentTarget.style.background="rgba(255,255,255,0.03)"}
+                      onMouseLeave={e => e.currentTarget.style.background="transparent"}
+                    >
+                      <td style={{ padding:"16px 20px" }}>
+                        <div style={{
+                          width:32, height:32, borderRadius:"50%",
+                          background:rs.bg, color:rs.color,
+                          display:"flex", alignItems:"center", justifyContent:"center",
+                          fontSize:"0.82rem", fontWeight:700,
+                        }}>{r.rank}</div>
+                      </td>
+                      <td style={{ padding:"16px 20px", fontWeight:500, whiteSpace:"nowrap" }}>{r.name}</td>
+                      <td style={{ padding:"16px 20px", fontFamily:"monospace", fontSize:"0.82rem", color:"var(--muted)", letterSpacing:"0.04em" }}>{r.roll}</td>
+                      <td style={{ padding:"16px 20px", color:"var(--muted)" }}>{r.cls}</td>
+                      <td style={{ padding:"16px 20px", color:"var(--muted)", whiteSpace:"nowrap", fontSize:"0.85rem" }}>{r.exam}</td>
+                      <td style={{ padding:"16px 20px", fontWeight:500, fontSize:"0.9rem" }}>{r.total}</td>
+                      <td style={{ padding:"16px 20px", fontWeight:600 }}>{r.pct}%</td>
+                      <td style={{ padding:"16px 20px" }}>
+                        <span style={{
+                          padding:"4px 12px", borderRadius:100, fontSize:"0.75rem", fontWeight:700,
+                          background:`${gradeColor(r.grade)}18`, color:gradeColor(r.grade),
+                          border:`1px solid ${gradeColor(r.grade)}30`,
+                        }}>{r.grade}</span>
+                      </td>
+                    </tr>
+                  );
+                })}
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+    </section>
+  );
+}
+
+/* ─── ACHIEVEMENTS ──────────────────────────────────────── */
+function Achievements() {
+  const [ref, visible] = useScrollReveal();
+  const awards = [
+    { year:"2024", title:"Best CBSE School, Rajasthan", body:"Ministry of Education" },
+    { year:"2023", title:"National Green School Award", body:"National Green Corps" },
+    { year:"2023", title:"STEM Excellence Award", body:"ISRO Education Cell" },
+    { year:"2022", title:"Digital Excellence Certificate", body:"CBSE Affiliation Board" },
+  ];
+
+  return (
+    <section id="achievements" style={{ padding:"140px 0", position:"relative", overflow:"hidden" }}>
+      <div style={{
+        position:"absolute", left:"50%", top:"50%", transform:"translate(-50%,-50%)",
+        width:900, height:900, borderRadius:"50%",
+        border:"1px solid rgba(201,168,76,0.04)",
+        pointerEvents:"none",
+      }} />
+
+      <div style={{ maxWidth:1180, margin:"0 auto", padding:"0 40px" }} ref={ref}>
+        <div style={{ textAlign:"center", marginBottom:80 }}>
+          <SectionLabel>Recognitions & Milestones</SectionLabel>
+          <h2 style={{
+            fontFamily:"var(--display)", fontSize:"clamp(2.4rem,4vw,3.6rem)", fontWeight:500,
+            opacity: visible ? 1 : 0, transform: visible ? "translateY(0)" : "translateY(30px)",
+            transition:"all 0.9s var(--slow)",
+          }}>
+            Our <span className="gold-text" style={{ fontStyle:"italic" }}>Achievements</span>
+          </h2>
+        </div>
+
+        {/* Stat cards */}
+        <div style={{ display:"grid", gridTemplateColumns:"repeat(3,1fr)", gap:24, marginBottom:60 }} className="ach-grid">
+          {ACHIEVEMENTS.map((a, i) => (
+            <div key={i} className="hover-lift" style={{
+              padding:"40px 32px", borderRadius:20,
+              border:"1px solid var(--border)",
+              background:"rgba(255,255,255,0.02)",
+              position:"relative", overflow:"hidden",
+              textAlign:"center", cursor:"default",
+              opacity: visible ? 1 : 0,
+              transform: visible ? "translateY(0)" : "translateY(40px)",
+              transition:`all 0.8s var(--slow) ${i*0.1}s`,
+            }}
+              onMouseEnter={e => { e.currentTarget.style.borderColor="rgba(201,168,76,0.3)"; e.currentTarget.style.background="rgba(201,168,76,0.03)"; }}
+              onMouseLeave={e => { e.currentTarget.style.borderColor="var(--border)"; e.currentTarget.style.background="rgba(255,255,255,0.02)"; }}
+            >
+              <div style={{ position:"absolute", top:0, left:0, right:0, height:2, background:"linear-gradient(90deg,transparent,var(--gold),transparent)", opacity:0.4 }} />
+              <div style={{ fontSize:"2.5rem", marginBottom:16 }}>{a.icon}</div>
+              <div style={{ fontFamily:"var(--display)", fontSize:"2.8rem", fontWeight:500, lineHeight:1, marginBottom:8 }}>
+                <span className="gold-text">{a.num}</span>
+              </div>
+              <div style={{ fontSize:"0.92rem", color:"var(--text)", fontWeight:500, marginBottom:6 }}>{a.label}</div>
+              <div style={{ fontSize:"0.75rem", color:"var(--muted2)" }}>{a.sub}</div>
+            </div>
+          ))}
+        </div>
+
+        {/* Award list */}
+        <div style={{
+          borderRadius:20, border:"1px solid var(--border)",
+          background:"rgba(255,255,255,0.02)", overflow:"hidden",
+          opacity: visible ? 1 : 0, transform: visible ? "translateY(0)" : "translateY(30px)",
+          transition:"all 0.9s var(--slow) 0.5s",
+        }}>
+          <div style={{ padding:"24px 32px", borderBottom:"1px solid var(--border)", display:"flex", justifyContent:"space-between", alignItems:"center" }}>
+            <div style={{ fontFamily:"var(--display)", fontSize:"1.3rem", fontWeight:500 }}>Recent Awards & Recognitions</div>
+            <div style={{ fontSize:"0.78rem", color:"var(--muted2)" }}>{awards.length} awards</div>
+          </div>
+          {awards.map((aw, i) => (
+            <div key={i} style={{
+              padding:"24px 32px",
+              borderBottom: i < awards.length-1 ? "1px solid rgba(255,255,255,0.04)" : "none",
+              display:"flex", alignItems:"center", gap:24,
+              transition:"background 0.2s",
+            }}
+              onMouseEnter={e => e.currentTarget.style.background="rgba(255,255,255,0.02)"}
+              onMouseLeave={e => e.currentTarget.style.background="transparent"}
+            >
+              <div style={{
+                minWidth:60, padding:"6px 10px", borderRadius:8,
+                background:"rgba(201,168,76,0.1)", border:"1px solid rgba(201,168,76,0.2)",
+                fontSize:"0.72rem", fontWeight:700, color:"var(--gold)", textAlign:"center",
+              }}>{aw.year}</div>
+              <div style={{ flex:1 }}>
+                <div style={{ fontWeight:500, fontSize:"0.95rem", marginBottom:3 }}>{aw.title}</div>
+                <div style={{ fontSize:"0.78rem", color:"var(--muted)" }}>{aw.body}</div>
+              </div>
+              <div style={{ fontSize:"1.5rem" }}>🏆</div>
+            </div>
+          ))}
+        </div>
+      </div>
+
+      <style>{`
+        @media (max-width: 900px) {
+          .ach-grid { grid-template-columns: repeat(2,1fr) !important; }
+        }
+        @media (max-width: 600px) {
+          .ach-grid { grid-template-columns: 1fr !important; }
+        }
+      `}</style>
+    </section>
+  );
+}
+
+/* ─── GALLERY ───────────────────────────────────────────── */
+function Gallery() {
+  const [ref, visible] = useScrollReveal();
+  const [active, setActive] = useState("all");
+  const tabs = ["all","campus","events","sports","arts"];
+
+  return (
+    <section id="gallery" style={{ padding:"140px 0", background:"var(--bg2)", position:"relative" }}>
+      <div style={{ maxWidth:1180, margin:"0 auto", padding:"0 40px" }} ref={ref}>
+        <div style={{ display:"flex", justifyContent:"space-between", alignItems:"flex-end", marginBottom:48, flexWrap:"wrap", gap:20 }}>
+          <div>
+            <SectionLabel>Life at Shakuntalam</SectionLabel>
+            <h2 style={{
+              fontFamily:"var(--display)", fontSize:"clamp(2.4rem,4vw,3.6rem)", fontWeight:500,
+              opacity: visible ? 1 : 0, transform: visible ? "translateY(0)" : "translateY(30px)",
+              transition:"all 0.9s var(--slow)",
+            }}>
+              Campus <span className="gold-text" style={{ fontStyle:"italic" }}>Gallery</span>
+            </h2>
+          </div>
+        </div>
+
+        {/* Tabs */}
+        <div style={{ display:"flex", gap:8, marginBottom:40, flexWrap:"wrap" }}>
+          {tabs.map(t => (
+            <button key={t} onClick={() => setActive(t)} style={{
+              padding:"9px 22px", borderRadius:100,
+              border: active===t ? "1px solid var(--gold)" : "1px solid var(--border)",
+              background: active===t ? "rgba(201,168,76,0.1)" : "transparent",
+              color: active===t ? "var(--gold)" : "var(--muted)",
+              cursor:"pointer", fontSize:"0.82rem", fontWeight:500,
+              textTransform:"capitalize", fontFamily:"var(--body)",
+              transition:"all 0.2s",
+            }}>{t}</button>
+          ))}
+        </div>
+
+        {/* Mosaic grid */}
+        <div style={{
+          display:"grid",
+          gridTemplateColumns:"repeat(4,1fr)",
+          gridTemplateRows:"240px 240px",
+          gap:16,
+        }} className="gallery-grid">
+          {GALLERY_ITEMS.map((item, i) => (
+            <div key={i} style={{
+              gridColumn: i===0 ? "span 2" : i===3 ? "span 2" : "span 1",
+              borderRadius:16, overflow:"hidden",
+              background:item.gradient, cursor:"pointer",
+              position:"relative",
+              opacity: visible ? 1 : 0,
+              transform: visible ? "scale(1)" : "scale(0.94)",
+              transition:`all 0.8s var(--slow) ${i*0.1}s`,
+            }}>
+              <div style={{
+                width:"100%", height:"100%",
+                display:"flex", flexDirection:"column",
+                alignItems:"center", justifyContent:"center",
+                fontSize: i===0 ? "5rem" : "3.5rem",
+                position:"relative",
+              }}>
+                <div style={{
+                  position:"absolute", inset:0,
+                  backgroundImage:"repeating-linear-gradient(45deg,rgba(255,255,255,0.02) 0,rgba(255,255,255,0.02) 1px,transparent 0,transparent 50%)",
+                  backgroundSize:"20px 20px",
+                }} />
+                <span style={{ position:"relative", zIndex:1, animation:"float 4s ease-in-out infinite", animationDelay:`${i*0.5}s` }}>{item.emoji}</span>
+                {/* Label */}
+                <div style={{
+                  position:"absolute", bottom:16, left:16,
+                  background:"rgba(0,0,0,0.6)", backdropFilter:"blur(10px)",
+                  padding:"6px 14px", borderRadius:100,
+                  fontSize:"0.75rem", fontWeight:500, color:"var(--text)",
+                  border:"1px solid rgba(255,255,255,0.1)",
+                }}>{item.label}</div>
+                {/* Hover overlay */}
+                <div style={{
+                  position:"absolute", inset:0,
+                  background:"rgba(201,168,76,0.1)",
+                  display:"flex", alignItems:"center", justifyContent:"center",
+                  opacity:0, transition:"opacity 0.3s",
+                  fontSize:"2rem",
+                }}
+                  onMouseEnter={e => e.currentTarget.style.opacity="1"}
+                  onMouseLeave={e => e.currentTarget.style.opacity="0"}
+                >⊕</div>
+              </div>
+            </div>
+          ))}
+        </div>
+
+        <div style={{ textAlign:"center", marginTop:48 }}>
+          <button style={{
+            padding:"13px 36px", borderRadius:100,
+            border:"1px solid var(--border)",
+            background:"transparent", cursor:"pointer",
+            fontSize:"0.9rem", color:"var(--muted)", fontFamily:"var(--body)",
+            transition:"all 0.3s",
+          }}
+            onMouseEnter={e => { e.currentTarget.style.borderColor="var(--gold)"; e.currentTarget.style.color="var(--gold)"; }}
+            onMouseLeave={e => { e.currentTarget.style.borderColor="var(--border)"; e.currentTarget.style.color="var(--muted)"; }}
+          >View Full Gallery</button>
+        </div>
+      </div>
+
+      <style>{`
+        @media (max-width: 768px) {
+          .gallery-grid {
+            grid-template-columns: 1fr 1fr !important;
+            grid-template-rows: auto !important;
+          }
+        }
+      `}</style>
+    </section>
+  );
+}
+
+/* ─── CONTACT ───────────────────────────────────────────── */
+function Contact() {
+  const [ref, visible] = useScrollReveal();
+  const [submitted, setSubmitted] = useState(false);
+
+  const inputStyle = {
+    width:"100%", padding:"14px 18px", borderRadius:12,
+    background:"rgba(255,255,255,0.04)",
+    border:"1px solid rgba(255,255,255,0.08)",
+    color:"var(--text)", fontFamily:"var(--body)", fontSize:"0.9rem",
+    outline:"none", transition:"border-color 0.2s, background 0.2s",
+  };
+
+  const info = [
+    { icon:"📞", label:"Phone", value:"+91 98765 43210" },
+    { icon:"✉️", label:"Email", value:"info@shakuntalam.edu.in" },
+    { icon:"📍", label:"Address", value:"Banasthali Vidyapith, Banasthali, Rajasthan — 304022" },
+    { icon:"🕐", label:"Office Hours", value:"Mon–Sat: 8:00 AM – 4:00 PM" },
+  ];
+
+  return (
+    <section id="contact" style={{ padding:"140px 0", position:"relative", overflow:"hidden" }}>
+      <div style={{
+        position:"absolute", left:0, bottom:0,
+        width:500, height:500,
+        background:"radial-gradient(circle, rgba(201,168,76,0.05) 0%, transparent 70%)",
+        pointerEvents:"none",
+      }} />
+
+      <div style={{ maxWidth:1180, margin:"0 auto", padding:"0 40px" }} ref={ref}>
+        <div style={{ display:"grid", gridTemplateColumns:"1fr 1.3fr", gap:80, alignItems:"start" }} className="contact-grid">
+          {/* Left */}
+          <div style={{
+            opacity: visible ? 1 : 0, transform: visible ? "translateX(0)" : "translateX(-40px)",
+            transition:"all 1s var(--slow)",
+          }}>
+            <SectionLabel>Get in Touch</SectionLabel>
+            <h2 style={{
+              fontFamily:"var(--display)", fontSize:"clamp(2.4rem,4vw,3.5rem)", fontWeight:500, lineHeight:1.15, marginBottom:12,
+            }}>
+              Contact <span className="gold-text" style={{ fontStyle:"italic" }}>&<br />Enquiries</span>
+            </h2>
+            <Divider />
+            <p style={{ fontSize:"0.95rem", color:"var(--muted)", lineHeight:1.8, marginBottom:48, maxWidth:380 }}>
+              We'd love to hear from you — whether it's about admissions, academics, events, or anything else.
+            </p>
+
+            <div style={{ display:"flex", flexDirection:"column", gap:16 }}>
+              {info.map((c, i) => (
+                <div key={i} style={{
+                  display:"flex", alignItems:"center", gap:20,
+                  padding:"20px 24px", borderRadius:16,
+                  border:"1px solid var(--border)",
+                  background:"rgba(255,255,255,0.02)",
+                  transition:"all 0.3s var(--ease)",
+                  cursor:"default",
+                }}
+                  onMouseEnter={e => { e.currentTarget.style.borderColor="rgba(201,168,76,0.3)"; e.currentTarget.style.transform="translateX(6px)"; }}
+                  onMouseLeave={e => { e.currentTarget.style.borderColor="var(--border)"; e.currentTarget.style.transform="translateX(0)"; }}
+                >
+                  <div style={{
+                    width:44, height:44, borderRadius:12,
+                    background:"linear-gradient(135deg,rgba(201,168,76,0.2),rgba(201,168,76,0.05))",
+                    display:"flex", alignItems:"center", justifyContent:"center",
+                    fontSize:"1.2rem", flexShrink:0,
+                  }}>{c.icon}</div>
+                  <div>
+                    <div style={{ fontSize:"0.68rem", letterSpacing:"0.1em", textTransform:"uppercase", color:"var(--muted2)", marginBottom:3 }}>{c.label}</div>
+                    <div style={{ fontSize:"0.9rem", fontWeight:500 }}>{c.value}</div>
+                  </div>
+                </div>
+              ))}
+            </div>
+
+            {/* Map placeholder */}
+            <div style={{
+              marginTop:32, borderRadius:16, overflow:"hidden",
+              height:200, border:"1px solid var(--border)",
+              background:"linear-gradient(135deg, #0a1020, #0a200a)",
+              display:"flex", flexDirection:"column", alignItems:"center", justifyContent:"center",
+              gap:12, position:"relative",
+            }}>
+              <div style={{
+                position:"absolute", inset:0,
+                backgroundImage:"linear-gradient(rgba(255,255,255,0.02) 1px,transparent 1px),linear-gradient(90deg,rgba(255,255,255,0.02) 1px,transparent 1px)",
+                backgroundSize:"30px 30px",
+              }} />
+              <div style={{ fontSize:"2.5rem", animation:"float 3s ease-in-out infinite", position:"relative", zIndex:1 }}>📍</div>
+              <div style={{ fontSize:"0.8rem", color:"var(--muted)", textAlign:"center", position:"relative", zIndex:1 }}>Banasthali Vidyapith<br />Banasthali, Rajasthan</div>
+              <a href="https://maps.google.com/?q=Banasthali+Vidyapith" target="_blank" rel="noreferrer" style={{
+                padding:"8px 20px", borderRadius:100,
+                background:"rgba(201,168,76,0.15)", border:"1px solid rgba(201,168,76,0.3)",
+                fontSize:"0.75rem", color:"var(--gold)", fontWeight:500,
+                position:"relative", zIndex:1, transition:"all 0.2s",
+              }}>Open in Google Maps →</a>
+            </div>
+          </div>
+
+          {/* Form */}
+          <div style={{
+            borderRadius:24, border:"1px solid var(--border)",
+            background:"rgba(255,255,255,0.02)",
+            padding:"48px 44px",
+            opacity: visible ? 1 : 0, transform: visible ? "translateX(0)" : "translateX(40px)",
+            transition:"all 1s var(--slow) 0.2s",
+            animation:"borderGlow 4s ease infinite",
+          }}>
+            {submitted ? (
+              <div style={{ textAlign:"center", padding:"60px 0" }}>
+                <div style={{ fontSize:"4rem", marginBottom:20, animation:"pulse 2s infinite" }}>✅</div>
+                <div style={{ fontFamily:"var(--display)", fontSize:"2rem", fontWeight:500, marginBottom:12 }}>Message Sent!</div>
+                <div style={{ color:"var(--muted)", fontSize:"0.95rem" }}>We'll get back to you within 24 hours.</div>
+                <button onClick={() => setSubmitted(false)} style={{
+                  marginTop:32, padding:"12px 28px", borderRadius:100,
+                  border:"1px solid var(--border)", background:"transparent",
+                  cursor:"pointer", color:"var(--muted)", fontFamily:"var(--body)", fontSize:"0.85rem",
+                }}>Send another message</button>
+              </div>
+            ) : (
+              <>
+                <div style={{ fontFamily:"var(--display)", fontSize:"1.8rem", fontWeight:500, marginBottom:6 }}>Send us a Message</div>
+                <div style={{ fontSize:"0.85rem", color:"var(--muted)", marginBottom:36 }}>We respond to all enquiries within 24 hours.</div>
+
+                <div style={{ display:"grid", gridTemplateColumns:"1fr 1fr", gap:16, marginBottom:0 }}>
+                  {["First Name","Last Name"].map(l => (
+                    <div key={l}>
+                      <label style={{ display:"block", fontSize:"0.72rem", fontWeight:600, letterSpacing:"0.08em", color:"var(--muted)", textTransform:"uppercase", marginBottom:8 }}>{l}</label>
+                      <input style={inputStyle} placeholder={l === "First Name" ? "Ananya" : "Sharma"}
+                        onFocus={e => { e.currentTarget.style.borderColor="var(--gold)"; e.currentTarget.style.background="rgba(201,168,76,0.04)"; }}
+                        onBlur={e => { e.currentTarget.style.borderColor="rgba(255,255,255,0.08)"; e.currentTarget.style.background="rgba(255,255,255,0.04)"; }}
+                      />
+                    </div>
+                  ))}
+                </div>
+
+                {[
+                  { label:"Email Address", placeholder:"ananya@example.com", type:"email" },
+                  { label:"Phone Number", placeholder:"+91 98765 43210", type:"tel" },
+                  { label:"Subject", placeholder:"Admission enquiry for Class IX", type:"text" },
+                ].map(f => (
+                  <div key={f.label} style={{ marginTop:16 }}>
+                    <label style={{ display:"block", fontSize:"0.72rem", fontWeight:600, letterSpacing:"0.08em", color:"var(--muted)", textTransform:"uppercase", marginBottom:8 }}>{f.label}</label>
+                    <input style={inputStyle} type={f.type} placeholder={f.placeholder}
+                      onFocus={e => { e.currentTarget.style.borderColor="var(--gold)"; e.currentTarget.style.background="rgba(201,168,76,0.04)"; }}
+                      onBlur={e => { e.currentTarget.style.borderColor="rgba(255,255,255,0.08)"; e.currentTarget.style.background="rgba(255,255,255,0.04)"; }}
+                    />
+                  </div>
+                ))}
+
+                <div style={{ marginTop:16 }}>
+                  <label style={{ display:"block", fontSize:"0.72rem", fontWeight:600, letterSpacing:"0.08em", color:"var(--muted)", textTransform:"uppercase", marginBottom:8 }}>Your Message</label>
+                  <textarea style={{ ...inputStyle, minHeight:110, resize:"vertical" }} placeholder="Tell us how we can help you…"
+                    onFocus={e => { e.currentTarget.style.borderColor="var(--gold)"; e.currentTarget.style.background="rgba(201,168,76,0.04)"; }}
+                    onBlur={e => { e.currentTarget.style.borderColor="rgba(255,255,255,0.08)"; e.currentTarget.style.background="rgba(255,255,255,0.04)"; }}
+                  />
+                </div>
+
+                <button onClick={() => setSubmitted(true)} style={{
+                  width:"100%", marginTop:24,
+                  padding:"16px", borderRadius:14,
+                  background:"linear-gradient(135deg,#c9a84c,#e8c96d)",
+                  border:"none", cursor:"pointer",
+                  fontSize:"0.95rem", fontWeight:600, color:"#0a0a0a",
+                  letterSpacing:"0.02em", fontFamily:"var(--body)",
+                  display:"flex", alignItems:"center", justifyContent:"center", gap:10,
+                  transition:"all 0.3s var(--ease)",
+                  boxShadow:"0 8px 30px rgba(201,168,76,0.2)",
+                }}
+                  onMouseEnter={e => { e.currentTarget.style.transform="translateY(-2px)"; e.currentTarget.style.boxShadow="0 16px 40px rgba(201,168,76,0.4)"; }}
+                  onMouseLeave={e => { e.currentTarget.style.transform="translateY(0)"; e.currentTarget.style.boxShadow="0 8px 30px rgba(201,168,76,0.2)"; }}
+                >Send Message ✦</button>
+              </>
+            )}
+          </div>
+        </div>
+      </div>
+
+      <style>{`
+        @media (max-width: 900px) {
+          .contact-grid { grid-template-columns: 1fr !important; gap: 48px !important; }
+        }
+      `}</style>
+    </section>
+  );
+}
+
+/* ─── SOCIAL ────────────────────────────────────────────── */
+function Social() {
+  const socials = [
+    { icon:"📸", label:"Instagram", handle:"@shakuntalam_school" },
+    { icon:"📘", label:"Facebook", handle:"/ShakuntalamSchool" },
+    { icon:"▶️", label:"YouTube", handle:"Shakuntalam Official" },
+    { icon:"🐦", label:"Twitter / X", handle:"@shakuntalam_edu" },
+    { icon:"💼", label:"LinkedIn", handle:"Shakuntalam School" },
+  ];
+
+  return (
+    <div style={{
+      background:"var(--bg2)", borderTop:"1px solid var(--border)",
+      borderBottom:"1px solid var(--border)", padding:"60px 0",
+    }}>
+      <div style={{ maxWidth:1180, margin:"0 auto", padding:"0 40px" }}>
+        <div style={{ textAlign:"center", marginBottom:36 }}>
+          <div style={{ fontSize:"0.72rem", fontWeight:600, letterSpacing:"0.2em", textTransform:"uppercase", color:"var(--muted2)" }}>
+            Follow Our Journey
+          </div>
+        </div>
+        <div style={{ display:"flex", justifyContent:"center", gap:16, flexWrap:"wrap" }}>
+          {socials.map((s, i) => (
+            <a key={i} href="#" style={{
+              display:"flex", alignItems:"center", gap:12,
+              padding:"12px 24px", borderRadius:100,
+              border:"1px solid var(--border)",
+              background:"rgba(255,255,255,0.02)",
+              color:"var(--muted)", fontSize:"0.85rem",
+              transition:"all 0.3s var(--ease)",
+              textDecoration:"none",
+            }}
+              onMouseEnter={e => { e.currentTarget.style.borderColor="var(--gold)"; e.currentTarget.style.color="var(--gold)"; e.currentTarget.style.background="rgba(201,168,76,0.06)"; e.currentTarget.style.transform="translateY(-3px)"; }}
+              onMouseLeave={e => { e.currentTarget.style.borderColor="var(--border)"; e.currentTarget.style.color="var(--muted)"; e.currenturrent.style.background="rgba(255,255,255,0.02)"; e.currentTarget.style.transform="translateY(0)"; }}
+            >
+              <span style={{ fontSize:"1.1rem" }}>{s.icon}</span>
+              <span>{s.label}</span>
+            </a>
+          ))}
+        </div>
+      </div>
+    </div>
+  );
+}
+
+/* ─── FOOTER ────────────────────────────────────────────── */
+function Footer() {
+  const cols = [
+    { title:"Quick Links", links:["About the School","Academic Programmes","Events & News","Student Results","Achievements","Gallery"] },
+    { title:"Admissions", links:["Apply Now","Eligibility Criteria","Fee Structure","Scholarship Programme","Transfer Enquiry","Prospectus"] },
+    { title:"Policies", links:["Privacy Policy","Terms of Use","Anti-Bullying Policy","POCSO Compliance","RTI / Grievances","Cookie Policy"] },
+  ];
+
+  return (
+    <footer style={{ background:"#030308", borderTop:"1px solid var(--border)", padding:"80px 0 40px" }}>
+      <div style={{ maxWidth:1180, margin:"0 auto", padding:"0 40px" }}>
+        <div style={{ display:"grid", gridTemplateColumns:"1.8fr 1fr 1fr 1fr", gap:48, paddingBottom:60, borderBottom:"1px solid var(--border)", marginBottom:40 }} className="footer-grid">
+          {/* Brand */}
+          <div>
+            <div style={{ display:"flex", alignItems:"center", gap:14, marginBottom:20 }}>
+              <div style={{
+                width:40, height:40, borderRadius:12,
+                background:"linear-gradient(135deg,#c9a84c,#e8c96d)",
+                display:"flex", alignItems:"center", justifyContent:"center",
+                fontSize:"1.1rem", fontWeight:700, color:"#0a0a0a",
+              }}>S</div>
+              <div>
+                <div style={{ fontFamily:"var(--display)", fontSize:"1.1rem", fontWeight:700 }}>Shakuntalam</div>
+                <div style={{ fontSize:"0.6rem", letterSpacing:"0.14em", color:"var(--gold)", textTransform:"uppercase" }}>Banasthali Vidyapith</div>
+              </div>
+            </div>
+            <p style={{ fontSize:"0.85rem", color:"var(--muted2)", lineHeight:1.75, maxWidth:280, marginBottom:28 }}>
+              Shaping tomorrow's leaders through excellence in education, values, and innovation since 1982.
+            </p>
+            <div style={{ fontSize:"0.78rem", color:"var(--muted2)" }}>
+              Banasthali, Rajasthan — 304022<br />
+              CBSE Affiliation No. XXXXXX
+            </div>
+          </div>
+
+          {cols.map((col, i) => (
+            <div key={i}>
+              <div style={{ fontSize:"0.68rem", fontWeight:600, letterSpacing:"0.16em", textTransform:"uppercase", color:"var(--muted2)", marginBottom:20 }}>{col.title}</div>
+              <ul style={{ listStyle:"none", display:"flex", flexDirection:"column", gap:12 }}>
+                {col.links.map(l => (
+                  <li key={l}>
+                    <a href="#" style={{
+                      fontSize:"0.85rem", color:"rgba(240,237,232,0.4)",
+                      textDecoration:"none", transition:"color 0.2s",
+                    }}
+                      onMouseEnter={e => e.currentTarget.style.color="var(--gold)"}
+                      onMouseLeave={e => e.currentTarget.style.color="rgba(240,237,232,0.4)"}
+                    >{l}</a>
+                  </li>
+                ))}
+              </ul>
+            </div>
+          ))}
+        </div>
+
+        <div style={{ display:"flex", justifyContent:"space-between", alignItems:"center", flexWrap:"wrap", gap:16 }}>
+          <div style={{ fontSize:"0.78rem", color:"rgba(240,237,232,0.25)" }}>
+            © 2025 Shakuntalam School, Banasthali Vidyapith. All rights reserved.
+          </div>
+          <div style={{ display:"flex", gap:24 }}>
+            {["Privacy","Terms","Sitemap"].map(l => (
+              <a key={l} href="#" style={{
+                fontSize:"0.78rem", color:"rgba(240,237,232,0.25)",
+                textDecoration:"none", transition:"color 0.2s",
+              }}
+                onMouseEnter={e => e.currentTarget.style.color="var(--gold)"}
+                onMouseLeave={e => e.currentTarget.style.color="rgba(240,237,232,0.25)"}
+              >{l}</a>
+            ))}
+          </div>
+        </div>
+      </div>
+
+      <style>{`
+        @media (max-width: 900px) {
+          .footer-grid { grid-template-columns: 1fr 1fr !important; }
+        }
+        @media (max-width: 600px) {
+          .footer-grid { grid-template-columns: 1fr !important; }
+        }
+      `}</style>
+    </footer>
+  );
+}
+
+/* ─── APP ───────────────────────────────────────────────── */
+export default function App() {
+  const [activeSection, setActiveSection] = useState("hero");
+  const scrollY = useScrollY();
+
+  // Track active section
+  useEffect(() => {
+    const sections = ["hero","about","academics","events","results","achievements","gallery","contact"];
+    const handleScroll = () => {
+      for (let i = sections.length - 1; i >= 0; i--) {
+        const el = document.getElementById(sections[i]);
+        if (el && window.scrollY >= el.offsetTop - 200) {
+          setActiveSection(sections[i]);
+          break;
+        }
+      }
+    };
+    window.addEventListener("scroll", handleScroll, { passive:true });
+    return () => window.removeEventListener("scroll", handleScroll);
+  }, []);
+
+  return (
+    <div style={{ minHeight:"100vh", background:"var(--bg)" }}>
+      <Nav active={activeSection} setActive={setActiveSection} />
+      <Hero />
+      <Ticker />
+      <About />
+      <Academics />
+      <Events />
+      <Results />
+      <Achievements />
+      <Gallery />
+      <Contact />
+      <Social />
+      <Footer />
+
+      {/* Back to top */}
+      {scrollY > 600 && (
+        <button
+          onClick={() => window.scrollTo({ top:0, behavior:"smooth" })}
+          style={{
+            position:"fixed", bottom:32, right:32, zIndex:999,
+            width:48, height:48, borderRadius:"50%",
+            background:"linear-gradient(135deg,#c9a84c,#e8c96d)",
+            border:"none", cursor:"pointer", fontSize:"1.1rem",
+            boxShadow:"0 8px 30px rgba(201,168,76,0.35)",
+            transition:"all 0.3s var(--ease)",
+            display:"flex", alignItems:"center", justifyContent:"center",
+            animation:"fadeIn 0.3s ease",
+          }}
+          onMouseEnter={e => { e.currentTarget.style.transform="translateY(-3px) scale(1.1)"; }}
+          onMouseLeave={e => { e.currentTarget.style.transform="translateY(0) scale(1)"; }}
+        >↑</button>
+      )}
+    </div>
+  );
+}
